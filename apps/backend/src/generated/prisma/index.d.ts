@@ -11398,3 +11398,7 @@ export namespace Prisma {
    */
   export const dmmf: runtime.BaseDMMF
 }
+
+export function create(arg0: { data: { name: string; email: string; password: string; }; }) {
+    throw new Error("Function not implemented.");
+}
