@@ -1,6 +1,6 @@
 type SignupRequest = {
   body: {
-    name?: string;      
+    name?: string;
     email: string;
     password: string;
   };
@@ -14,4 +14,5 @@ type SigninRequest = {
 };
 
 
-export {SigninRequest,SignupRequest}
+
+export { SigninRequest, SignupRequest };

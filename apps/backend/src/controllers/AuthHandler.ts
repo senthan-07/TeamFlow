@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 import dotenv from "dotenv";
-import { SignupRequest ,SigninRequest } from "../types/type";
+import { SignupRequest ,SigninRequest } from "../types/auth";
 
 dotenv.config();
 
