@@ -11,7 +11,7 @@ const newBoardHandler = async (req: Request, res: Response) => {
   const userId = req.userId;
   const { title, userEmails = [] } = req.body;
 
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const users = await prisma.user.findMany({
@@ -38,10 +38,10 @@ const newBoardHandler = async (req: Request, res: Response) => {
       },
     });
 
-    return res.status(201).json(board);
+    res.status(201).json(board);
   } catch (err) {
     console.error("newBoardHandler error:", err);
-    return res.status(500).json({ error: "Failed to create board" });
+    res.status(500).json({ error: "Failed to create board" });
   }
 };
 
@@ -50,8 +50,8 @@ const getBoardHandler = async (req: Request, res: Response) => {
   const userId = req.userId;
   const { boardId } = req.params;
 
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-  if (!boardId) return res.status(400).json({ error: "Board ID is required" });
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
+  if (!boardId) res.status(400).json({ error: "Board ID is required" });
 
   try {
     const board = await prisma.board.findFirst({
@@ -73,13 +73,13 @@ const getBoardHandler = async (req: Request, res: Response) => {
     });
 
     if (!board) {
-      return res.status(404).json({ error: "Board not found or access denied" });
+      res.status(404).json({ error: "Board not found or access denied" });
     }
 
-    return res.json(board);
+    res.json(board);
   } catch (err) {
     console.error("getBoardHandler error:", err);
-    return res.status(500).json({ error: "Failed to fetch board" });
+    res.status(500).json({ error: "Failed to fetch board" });
   }
 };
 
@@ -88,7 +88,7 @@ const BoardUserHandler = async(req:Request,res:Response)=>{
   const userId = req.userId;
   const { boardId } = req.params;
 
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
@@ -111,13 +111,13 @@ const BoardUserHandler = async(req:Request,res:Response)=>{
     });
 
     if (!board) {
-      return res.status(404).json({ error: "Board not found or access denied" });
+      res.status(404).json({ error: "Board not found or access denied" });
     }
 
-    return res.json(board.users);
+    res.json(board.users);
   } catch (err) {
     console.error("BoardUserHandler error:", err);
-    return res.status(500).json({ error: "Failed to fetch users" });
+    res.status(500).json({ error: "Failed to fetch users" });
   }
 }
 
@@ -127,7 +127,7 @@ const InviteHandler = async(req:Request,res:Response)=>{
   const { boardId } = req.params;
   const { email } = req.body;
 
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
@@ -138,13 +138,13 @@ const InviteHandler = async(req:Request,res:Response)=>{
     });
 
     if (!board) {
-      return res.status(403).json({ error: "Only the owner can invite users" });
+      res.status(403).json({ error: "Only the owner can invite users" });
     }
 
     const userToInvite = await prisma.user.findUnique({ where: { email } });
 
     if (!userToInvite) {
-      return res.status(404).json({ error: "User not found" });
+      res.status(404).json({ error: "User not found" });
     }
 
     await prisma.board.update({
@@ -156,10 +156,10 @@ const InviteHandler = async(req:Request,res:Response)=>{
       },
     });
 
-    return res.status(200).json({ message: "User invited successfully" });
+    res.status(200).json({ message: "User invited successfully" });
   } catch (err) {
     console.error("InviteHandler error:", err);
-    return res.status(500).json({ error: "Failed to invite user" });
+    res.status(500).json({ error: "Failed to invite user" });
   }
 }
 
@@ -168,7 +168,7 @@ const updateHandler = async(req:Request,res:Response)=>{
   const { boardId } = req.params;
   const { title } = req.body;
 
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
@@ -179,7 +179,7 @@ const updateHandler = async(req:Request,res:Response)=>{
     });
 
     if (!board) {
-      return res.status(403).json({ error: "Only the owner can update the board" });
+      res.status(403).json({ error: "Only the owner can update the board" });
     }
 
     const updated = await prisma.board.update({
@@ -187,10 +187,10 @@ const updateHandler = async(req:Request,res:Response)=>{
       data: { title },
     });
 
-    return res.status(200).json(updated);
+    res.status(200).json(updated);
   } catch (err) {
     console.error("updateHandler error:", err);
-    return res.status(500).json({ error: "Failed to update board" });
+    res.status(500).json({ error: "Failed to update board" });
   }
 }
 
@@ -198,7 +198,7 @@ const DeletHandler = async(req:Request,res:Response)=>{
   const userId = req.userId;
   const { boardId } = req.params;
 
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
@@ -209,17 +209,17 @@ const DeletHandler = async(req:Request,res:Response)=>{
     });
 
     if (!board) {
-      return res.status(403).json({ error: "Only the owner can delete the board" });
+      res.status(403).json({ error: "Only the owner can delete the board" });
     }
 
     await prisma.board.delete({
       where: { id: boardId },
     });
 
-    return res.status(200).json({ message: "Board deleted successfully" });
+    res.status(200).json({ message: "Board deleted successfully" });
   } catch (err) {
     console.error("DeletHandler error:", err);
-    return res.status(500).json({ error: "Failed to delete board" });
+    res.status(500).json({ error: "Failed to delete board" });
   }
 }
 
