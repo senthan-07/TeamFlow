@@ -12,6 +12,7 @@ const newBoardHandler = async (req: Request, res: Response) => {
   const { title, userEmails = [] } = req.body;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
+  // console.log(userId);
 
   try {
     const users = await prisma.user.findMany({
@@ -27,7 +28,7 @@ const newBoardHandler = async (req: Request, res: Response) => {
     const board = await prisma.board.create({
       data: {
         title,
-        ownerId: userId,
+        ownerId: userId!,
         users: {
           connect: userIds.map((id: string) => ({ id })),
         },
@@ -46,19 +47,19 @@ const newBoardHandler = async (req: Request, res: Response) => {
 };
 
 
-const getBoardHandler = async (req: Request, res: Response) => {
+const getBoardHandler = async (req: Request<{title:string}>, res: Response) => {
   const userId = req.userId;
-  const { boardId } = req.params;
+  const { title } = req.body;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
-  if (!boardId) res.status(400).json({ error: "Board ID is required" });
+  if (!title) res.status(400).json({ error: "Board Name is required" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        id: boardId,
+        title: title,
         OR: [
-          { ownerId: userId },
+          { ownerId: userId! },
           { users: { some: { id: userId } } },
         ],
       },
@@ -84,16 +85,16 @@ const getBoardHandler = async (req: Request, res: Response) => {
 };
 
 //To get users present in a board
-const BoardUserHandler = async(req:Request,res:Response)=>{
+const BoardUserHandler = async (req: Request<{ title: string }>,res: Response) => {
   const userId = req.userId;
-  const { boardId } = req.params;
+  const { title } = req.params;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        id: boardId,
+        title: title, // or use slug if implemented
         OR: [
           { ownerId: userId },
           { users: { some: { id: userId } } },
@@ -114,26 +115,26 @@ const BoardUserHandler = async(req:Request,res:Response)=>{
       res.status(404).json({ error: "Board not found or access denied" });
     }
 
-    res.json(board.users);
+    res.json(board!.users);
   } catch (err) {
     console.error("BoardUserHandler error:", err);
     res.status(500).json({ error: "Failed to fetch users" });
   }
-}
+};
 
 //Add users to board by owner
-const InviteHandler = async(req:Request,res:Response)=>{
+const InviteHandler = async(req:Request<{title:string}>,res:Response)=>{
   const userId = req.userId;
-  const { boardId } = req.params;
-  const { email } = req.body;
+  const { title , email } = req.body;
+  // console.log(email)
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        id: boardId,
-        ownerId: userId,
+        title: title,
+        ownerId: userId!,
       },
     });
 
@@ -148,10 +149,10 @@ const InviteHandler = async(req:Request,res:Response)=>{
     }
 
     await prisma.board.update({
-      where: { id: boardId },
+      where: { title: title },
       data: {
         users: {
-          connect: { id: userToInvite.id },
+          connect: { id: userToInvite!.id },
         },
       },
     });
@@ -163,18 +164,17 @@ const InviteHandler = async(req:Request,res:Response)=>{
   }
 }
 
-const updateHandler = async(req:Request,res:Response)=>{
+const updateHandler = async(req:Request<{title:string}>,res:Response)=>{
   const userId = req.userId;
-  const { boardId } = req.params;
-  const { title } = req.body;
+  const { title } = req.params;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        id: boardId,
-        ownerId: userId,
+        title: title,
+        ownerId: userId!,
       },
     });
 
@@ -183,7 +183,7 @@ const updateHandler = async(req:Request,res:Response)=>{
     }
 
     const updated = await prisma.board.update({
-      where: { id: boardId },
+      where: { title: title },
       data: { title },
     });
 
@@ -194,17 +194,17 @@ const updateHandler = async(req:Request,res:Response)=>{
   }
 }
 
-const DeletHandler = async(req:Request,res:Response)=>{
+const DeletHandler = async(req:Request<{title:string}>,res:Response)=>{
   const userId = req.userId;
-  const { boardId } = req.params;
+  const { title } = req.body;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        id: boardId,
-        ownerId: userId,
+        title: title,
+        ownerId: userId!,
       },
     });
 
@@ -213,7 +213,7 @@ const DeletHandler = async(req:Request,res:Response)=>{
     }
 
     await prisma.board.delete({
-      where: { id: boardId },
+      where: { title: title },
     });
 
     res.status(200).json({ message: "Board deleted successfully" });
