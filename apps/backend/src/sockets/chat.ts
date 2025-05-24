@@ -11,8 +11,8 @@ export const initSocket = (io: Server) => {
     if (!token) return next(new Error("Unauthorized"));
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { id: string };
-      socket.data.userId = decoded.id; // Attach userId to socket data
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
+      socket.data.userId = decoded.userId;
       next();
     } catch (err) {
       next(new Error("Invalid token"));
