@@ -22,13 +22,27 @@ export const initSocket = (io: Server) => {
   io.on("connection", (socket: Socket) => {
     console.log("New client connected:", socket.id);
 
-    socket.on("joinBoard", (boardId: string) => {
-      socket.join(boardId);
-      console.log(`${socket.id} joined board ${boardId}`);
-      socket.emit("joinedBoard", { boardId, socketId: socket.id });
+    socket.on("joinBoard", async (boardTitle: string) => {
+      try {
+        // Verify board exists
+        const board = await prisma.board.findUnique({
+          where: { title: boardTitle },
+        });
+
+        if (!board) {
+          return socket.emit("error", { message: "Board not found" });
+        }
+
+        socket.join(boardTitle);
+        console.log(`${socket.id} joined board ${boardTitle}`);
+        socket.emit("joinedBoard", { boardTitle, socketId: socket.id });
+      } catch (err) {
+        console.error("joinBoard error:", err);
+        socket.emit("error", { message: "Failed to join board" });
+      }
     });
 
-    socket.on("chatMessage", async ({ boardId, message }: { boardId: string; message: string }) => {
+    socket.on("chatMessage", async ({ boardTitle, message }: { boardTitle: string; message: string }) => {
       const userId = socket.data.userId;
       if (!userId) {
         return socket.emit("error", { message: "Unauthorized" });
@@ -37,7 +51,7 @@ export const initSocket = (io: Server) => {
       try {
         const board = await prisma.board.findFirst({
           where: {
-            id: boardId,
+            title: boardTitle,
             OR: [
               { ownerId: userId },
               { users: { some: { id: userId } } },
@@ -51,7 +65,7 @@ export const initSocket = (io: Server) => {
 
         const chat = await prisma.chat.create({
           data: {
-            boardId,
+            boardId: board.id,
             userId,
             message,
           },
@@ -60,7 +74,7 @@ export const initSocket = (io: Server) => {
           },
         });
 
-        io.to(boardId).emit("chatMessage", chat);
+        io.to(boardTitle).emit("chatMessage", chat);
       } catch (err) {
         console.error("Chat message error:", err);
         socket.emit("error", { message: "Failed to send message" });
