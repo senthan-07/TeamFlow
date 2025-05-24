@@ -49,47 +49,47 @@ const getHandler = async (req: Request, res: Response) => {
 };
 
 // Send a Chat Message
-const sendHandler = async (req: Request, res: Response) => {
-  const userId = req.userId;
-  const { title } = req.params as { title: string };
-  const { message } = req.body;
+// const sendHandler = async (req: Request, res: Response) => {
+//   const userId = req.userId;
+//   const { title } = req.params as { title: string };
+//   const { message } = req.body;
 
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+//   if (!userId) {
+//     res.status(401).json({ error: "Unauthorized" });
+//     return;
+//   }
 
-  if (!message) {
-    res.status(400).json({ error: "Message is required" });
-    return;
-  }
+//   if (!message) {
+//     res.status(400).json({ error: "Message is required" });
+//     return;
+//   }
 
-  try {
-    const board = await prisma.board.findUnique({ where: { title } });
-    if (!board) {
-      res.status(404).json({ error: "Board not found" });
-      return;
-    }
+//   try {
+//     const board = await prisma.board.findUnique({ where: { title } });
+//     if (!board) {
+//       res.status(404).json({ error: "Board not found" });
+//       return;
+//     }
 
-    const chat = await prisma.chat.create({
-      data: {
-        boardId: board.id,
-        userId: userId,
-        message,
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-      },
-    });
+//     const chat = await prisma.chat.create({
+//       data: {
+//         boardId: board.id,
+//         userId: userId,
+//         message,
+//       },
+//       include: {
+//         user: { select: { id: true, name: true, email: true } },
+//       },
+//     });
 
-    res.status(201).json(chat);
-    return;
-  } catch (err) {
-    console.error("sendMessageHandler error:", err);
-    res.status(500).json({ error: "Failed to send message" });
-    return;
-  }
-};
+//     res.status(201).json(chat);
+//     return;
+//   } catch (err) {
+//     console.error("sendMessageHandler error:", err);
+//     res.status(500).json({ error: "Failed to send message" });
+//     return;
+//   }
+// };
 
 // Delete All Chat for a Board
 const deleteHandler = async (req: Request, res: Response) => {
@@ -127,4 +127,4 @@ const deleteHandler = async (req: Request, res: Response) => {
   }
 };
 
-export { getHandler, sendHandler, deleteHandler };
+export { getHandler, deleteHandler };
