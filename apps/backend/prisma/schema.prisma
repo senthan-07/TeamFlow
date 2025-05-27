@@ -44,7 +44,7 @@ model Board {
 
 model Drawing {
   id          String    @id @default(cuid())
-  boardId     String
+  boardId     String    @unique
   board       Board     @relation(fields: [boardId], references: [id])
   // You can store serialized drawing data or JSON of drawing actions
   data        Json

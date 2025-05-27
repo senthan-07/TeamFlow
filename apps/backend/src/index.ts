@@ -2,6 +2,7 @@ import express from "express";
 import { PrismaClient } from "@prisma/client";
 import cors from "cors";
 import { initSocket } from "./sockets/chat";
+import { initDrawSocket } from "./sockets/draw";
 import { createServer } from "http";
 import { Server } from "socket.io";
 
@@ -33,6 +34,7 @@ app.use("/chat",chatRouter)
 app.use("/files",fileRouter)
 
 initSocket(io);
+initDrawSocket(io);
 
 
 server.listen(4000, () => {
