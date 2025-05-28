@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const handleRegister = async (name: string, email: string, password: string) => {
     try {
       await register(name, email, password);
-      router.push('/boards');
+      router.push('/dashboard');
     } catch (err) {
       setError('Failed to register');
     }

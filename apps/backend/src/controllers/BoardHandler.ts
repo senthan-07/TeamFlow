@@ -6,6 +6,49 @@ dotenv.config();
 
 const prisma = new PrismaClient();
 
+const getAllBoardHandler = async (req: Request, res: Response) => {
+  const userId = req.userId;
+
+  if (!userId) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  try {
+    const boards = await prisma.board.findMany({
+      where: {
+        OR: [
+          { ownerId: userId! },   // User is the owner
+          { users: { some: { id: userId } } },  // User is part of the board
+        ],
+      },
+      select: {
+        id: true,        // board id
+        title: true,     // board title
+        owner: {         // owner fields
+          select: {
+            id: true,    // owner id
+            name: true,  //  owner name
+          },
+        },
+      },
+    });
+
+    if (boards.length === 0) {
+      res.status(404).json({ error: "No boards found or access denied" });
+      return;
+    }
+
+    res.json(boards);
+  } catch (err) {
+    console.error("getAllBoardsHandler error:", err);
+    res.status(500).json({ error: "Failed to fetch boards" });
+    return;
+  }
+};
+
+
+
 
 const newBoardHandler = async (req: Request, res: Response) => {
   const userId = req.userId;
@@ -49,7 +92,7 @@ const newBoardHandler = async (req: Request, res: Response) => {
 
 const getBoardHandler = async (req: Request<{title:string}>, res: Response) => {
   const userId = req.userId;
-  const { title } = req.body;
+  const { title } = req.params;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
   if (!title) res.status(400).json({ error: "Board Name is required" });
@@ -196,7 +239,7 @@ const updateHandler = async(req:Request<{title:string}>,res:Response)=>{
 
 const DeletHandler = async(req:Request<{title:string}>,res:Response)=>{
   const userId = req.userId;
-  const { title } = req.body;
+  const { title } = req.params;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
 
@@ -223,4 +266,4 @@ const DeletHandler = async(req:Request<{title:string}>,res:Response)=>{
   }
 }
 
-export {newBoardHandler,getBoardHandler,BoardUserHandler,InviteHandler,updateHandler,DeletHandler}
+export {getAllBoardHandler,newBoardHandler,getBoardHandler,BoardUserHandler,InviteHandler,updateHandler,DeletHandler}

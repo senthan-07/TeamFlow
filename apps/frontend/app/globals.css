@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-:root {
+/* :root {
   --background: #ffffff;
   --foreground: #171717;
   --color-background: var(--background);
@@ -14,11 +14,11 @@
     --background: #0a0a0a;
     --foreground: #ededed;
   }
-}
+} */
 
 /* Global base styles */
-body {
+/* body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-}
+} */

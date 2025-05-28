@@ -13,7 +13,7 @@ export default function LoginPage() {
   const handleLogin = async (email: string, password: string) => {
     try {
       await login(email, password);
-      router.push('/boards');
+      router.push('/dashboard');
     } catch (err) {
       setError('Invalid email or password');
     }

@@ -10,7 +10,7 @@ export const useAuth = () => {
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const res = await api.post('/auth/register', { name, email, password });
+    const res = await api.post('/auth/signup', { name, email, password });
     setUser(res.data.user, res.data.token);
   };
 
