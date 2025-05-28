@@ -16,7 +16,7 @@ export function useBoards() {
       setBoards(res.data);
       setError(null);
     } catch (e: any) {
-      setError(e.message || "Failed to fetch boards");
+      setError(e.message || "Failed to fetch boards" );
     } finally {
       setLoading(false);
     }
@@ -28,16 +28,16 @@ export function useBoards() {
       addBoard(res.data);
       return res.data;
     } catch (e: any) {
-      throw new Error(e.response?.data?.message || "Failed to create board");
+      throw new Error(e.response?.data?.message || e.message || "Failed to create board");
     }
   };
 
-  const deleteBoard = async (title: string) => {
+  const deleteBoard = async (id: string) => {
     try {
-      await api.delete(`/board/${title}`);
-      removeBoard(title);
+      await api.delete(`/board/${id}`);
+      removeBoard(id);
     } catch (e: any) {
-      throw new Error(e.response?.data?.message || "Failed to delete board");
+      throw new Error(e.response?.data?.message || e.message || "Failed to delete board");
     }
   };
 

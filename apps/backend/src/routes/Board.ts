@@ -4,7 +4,7 @@ import authenticateToken from "../middlewares/Authmiddleware";
 const boardRouter = Router()
 
 boardRouter.get("/all",authenticateToken,getAllBoardHandler);
-boardRouter.get("/details/:title",authenticateToken,getBoardHandler);
+boardRouter.get("/:id",authenticateToken,getBoardHandler);
 boardRouter.post("/new",authenticateToken,newBoardHandler);
 boardRouter.get("/users",authenticateToken,BoardUserHandler);
 boardRouter.post("/invite",authenticateToken,InviteHandler);

@@ -1,13 +1,17 @@
 import { create } from "zustand";
+import { Chat , Drawing , RTCSessions, User} from "../types/type";
 
 interface Board {
   id: string;
   title: string;
-  owner: {
-    id: string;
-    name: string | null;
-  };
+  owner: User;
+  users?: User[];
+  chats?: Chat[];
+  drawings?: Drawing[];
+  files?: File[];
+  rtcSessions?: RTCSessions[];
 }
+
 
 interface BoardStore {
   boards: Board[];
@@ -24,8 +28,8 @@ export const useBoardStore = create<BoardStore>((set) => ({
   setBoards: (boards) => set({ boards }),
   setCurrentBoard: (board) => set({ currentBoard: board }),
   addBoard: (board) => set((state) => ({ boards: [...state.boards, board] })),
-  removeBoard: (title) =>
+  removeBoard: (id) =>
     set((state) => ({
-      boards: state.boards.filter((b) => b.title !== title),
+      boards: state.boards.filter((b) => b.id !== id),
     })),
 }));

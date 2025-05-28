@@ -29,7 +29,7 @@ export const signupHandler = async (req: SignupRequest, res: any) => {
       },
     });
 
-    res.status(201).json({ message: "User registered successfully", user });
+    res.status(201).json({ message: "User registered successfully", user:user });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error signing up user" });
@@ -62,6 +62,7 @@ export const signinHandler = async (req: SigninRequest, res: any) => {
 
     // Send the token to the user
     res.status(200).json({
+      user:user,
       message: "Login successful",
       token,
     });

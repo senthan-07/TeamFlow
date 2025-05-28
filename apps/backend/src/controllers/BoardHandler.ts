@@ -90,17 +90,17 @@ const newBoardHandler = async (req: Request, res: Response) => {
 };
 
 
-const getBoardHandler = async (req: Request<{title:string}>, res: Response) => {
+const getBoardHandler = async (req: Request<{id:string}>, res: Response) => {
   const userId = req.userId;
-  const { title } = req.params;
+  const { id } = req.params;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
-  if (!title) res.status(400).json({ error: "Board Name is required" });
+  if (!id) res.status(400).json({ error: "Board Name is required" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        title: title,
+        id: id,
         OR: [
           { ownerId: userId! },
           { users: { some: { id: userId } } },
@@ -237,16 +237,16 @@ const updateHandler = async(req:Request<{title:string}>,res:Response)=>{
   }
 }
 
-const DeletHandler = async(req:Request<{title:string}>,res:Response)=>{
+const DeletHandler = async(req:Request<{id:string}>,res:Response)=>{
   const userId = req.userId;
-  const { title } = req.params;
+  const { id } = req.params;
 
   if (!userId) res.status(401).json({ error: "Unauthorized" });
 
   try {
     const board = await prisma.board.findFirst({
       where: {
-        title: title,
+        id: id,
         ownerId: userId!,
       },
     });
@@ -256,7 +256,7 @@ const DeletHandler = async(req:Request<{title:string}>,res:Response)=>{
     }
 
     await prisma.board.delete({
-      where: { title: title },
+      where: { id:board?.id },
     });
 
     res.status(200).json({ message: "Board deleted successfully" });

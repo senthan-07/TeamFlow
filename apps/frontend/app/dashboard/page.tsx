@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useBoards } from '../../hooks/useBoard'
+import Link from 'next/link'
 
 export default function DashboardPage() {
   const { boards, loading, error, createBoard, deleteBoard } = useBoards()
@@ -19,10 +20,10 @@ export default function DashboardPage() {
     }
   }
 
-  const handleDelete = async (title: string) => {
+  const handleDelete = async (id:string,title: string) => {
     if (confirm(`Delete board "${title}"?`)) {
       try {
-        await deleteBoard(title)
+        await deleteBoard(id)
       } catch (err: any) {
         alert(err.message)
       }
@@ -74,14 +75,11 @@ export default function DashboardPage() {
                 <p className="text-sm text-gray-500">Owner: {board.owner.name}</p>
               </div>
               <div className="flex gap-2">
-                <a
-                  href={`/board/${board.title}`}
-                  className="text-blue-600 hover:underline"
-                >
+                <Link href={`/board/${board.id}`} className="text-blue-600 hover:underline">
                   Open
-                </a>
+                </Link>
                 <button
-                  onClick={() => handleDelete(board.title.toString())}
+                  onClick={() => handleDelete(board.id.toString(),board.title.toString())}
                   className="text-red-500 hover:underline"
                 >
                   Delete
