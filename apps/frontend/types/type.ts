@@ -35,3 +35,26 @@ export interface RTCSessions {
   startedAt: string;
   endedAt:string;
 }
+
+
+
+export interface PathPoint {
+  x: number;
+  y: number;
+  color: string;
+  size: number;
+}
+
+export interface Cursor {
+  userId: string;
+  position: { x: number; y: number };
+}
+
+export interface DrawState {
+  paths: PathPoint[][];
+  cursors: Cursor[];
+  addPath: (path: PathPoint[]) => void;
+  updateCursor: (cursor: Cursor) => void;
+  setPaths: (paths: PathPoint[][]) => void;
+  clear: () => void;
+}

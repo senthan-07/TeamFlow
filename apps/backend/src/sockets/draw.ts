@@ -5,8 +5,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const initDrawSocket = (io: Server) => {
-  // Middleware to authenticate socket
-  io.use((socket: Socket, next) => {
+  const drawNamespace = io.of("/draw");
+
+  // Middleware to authenticate socket for /draw namespace
+  drawNamespace.use((socket: Socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error("Unauthorized"));
 
@@ -19,16 +21,16 @@ export const initDrawSocket = (io: Server) => {
     }
   });
 
-  io.on("connection", (socket: Socket) => {
+  drawNamespace.on("connection", (socket: Socket) => {
     console.log("Draw socket connected:", socket.id);
 
-    socket.on("joinBoard", async (boardTitle: string) => {
+    socket.on("joinBoard", async (boardId: string) => {
       try {
         const userId = socket.data.userId;
 
         const board = await prisma.board.findFirst({
           where: {
-            title: boardTitle,
+            id: boardId,
             OR: [
               { ownerId: userId },
               { users: { some: { id: userId } } },
@@ -40,21 +42,29 @@ export const initDrawSocket = (io: Server) => {
           return socket.emit("error", { message: "Board not found or access denied" });
         }
 
-        socket.join(boardTitle);
-        console.log(`${socket.id} joined drawing board ${boardTitle}`);
-        socket.emit("joinedBoard", { boardTitle });
+        socket.join(boardId);
+        console.log(`${socket.id} joined drawing board ${boardId}`);
+        socket.emit("joinedBoard", { boardId });
+
+        const drawing = await prisma.drawing.findUnique({
+          where: { boardId },
+        });
+
+        if (drawing) {
+          socket.emit("initialDrawing", drawing.data);
+        }
       } catch (err) {
         console.error("joinBoard (draw) error:", err);
         socket.emit("error", { message: "Failed to join board" });
       }
     });
 
-    socket.on("drawing", async ({ boardTitle, path }) => {
+    socket.on("newStroke", async ({ boardId, path }) => {
       const userId = socket.data.userId;
 
       const board = await prisma.board.findFirst({
         where: {
-          title: boardTitle,
+          id: boardId,
           OR: [
             { ownerId: userId },
             { users: { some: { id: userId } } },
@@ -66,49 +76,50 @@ export const initDrawSocket = (io: Server) => {
         return socket.emit("error", { message: "Unauthorized drawing action" });
       }
 
-      // Broadcast the drawing path to others
-      socket.to(boardTitle).emit("drawing", path);
+      // Broadcast the drawing path to others in the same board room
+      socket.to(boardId).emit("newStroke", path);
+      console.log(`${userId} path = ${path}`)
     });
 
-    socket.on("cursorMove", ({ boardTitle, position }) => {
+    socket.on("cursorMove", ({ boardId, position }) => {
       const userId = socket.data.userId;
-      socket.to(boardTitle).emit("cursorMove", { userId, position });
+      socket.to(boardId).emit("cursorMove", { userId, position });
+      console.log(`${userId} position = ${position}`)
     });
 
-    socket.on("saveDrawing", async ({ boardTitle, data }) => {
-    const userId = socket.data.userId;
+    socket.on("saveDrawing", async ({ boardId, data }) => {
+      const userId = socket.data.userId;
 
-    try {
+      try {
         const board = await prisma.board.findFirst({
-        where: {
-            title: boardTitle,
+          where: {
+            id : boardId,
             OR: [
-            { ownerId: userId },
-            { users: { some: { id: userId } } },
+              { ownerId: userId },
+              { users: { some: { id: userId } } },
             ],
-        },
+          },
         });
 
         if (!board) {
-        return socket.emit("error", { message: "Unauthorized save action" });
+          return socket.emit("error", { message: "Unauthorized save action" });
         }
 
         await prisma.drawing.upsert({
-        where: { boardId: board.id },
-        update: { data },
-        create: {
+          where: { boardId: board.id },
+          update: { data },
+          create: {
             boardId: board.id,
             data,
-        },
+          },
         });
 
-        console.log(`Saved drawing for board ${boardTitle}`);
-    } catch (error) {
+        console.log(`Saved drawing for board ${board.title}`);
+      } catch (error) {
         console.error("saveDrawing error:", error);
         socket.emit("error", { message: "Failed to save drawing" });
-    }
+      }
     });
-
 
     socket.on("disconnect", () => {
       console.log("Draw socket disconnected:", socket.id);

@@ -1,7 +1,7 @@
 import express from "express";
 import { PrismaClient } from "@prisma/client";
 import cors from "cors";
-import { initSocket } from "./sockets/chat";
+import { initChatSocket } from "./sockets/chat"; 
 import { initDrawSocket } from "./sockets/draw";
 import { initRTC } from "./sockets/rtc";
 import { createServer } from "http";
@@ -36,7 +36,7 @@ app.use("/chat",chatRouter)
 app.use("/files",fileRouter)
 app.use("/rtc",RTCrouter)
 
-initSocket(io);
+initChatSocket(io);
 initDrawSocket(io);
 initRTC(io);
 
