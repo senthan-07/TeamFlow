@@ -5,8 +5,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const initRTC = (io: Server) => {
-  // Auth middleware
-  io.use((socket: Socket, next) => {
+  const rtcNamespace = io.of("/rtc"); 
+
+  // Auth middleware for namespace
+  rtcNamespace.use((socket: Socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error("Unauthorized"));
 
@@ -19,15 +21,15 @@ export const initRTC = (io: Server) => {
     }
   });
 
-  io.on("connection", (socket: Socket) => {
+  rtcNamespace.on("connection", (socket: Socket) => {
     console.log("RTC client connected:", socket.id);
 
-    socket.on("joinRTC", async (boardTitle: string) => {
+    socket.on("joinRTC", async (boardId: string) => {
       const userId = socket.data.userId;
       try {
         const board = await prisma.board.findFirst({
           where: {
-            title: boardTitle,
+            id: boardId,
             OR: [{ ownerId: userId }, { users: { some: { id: userId } } }],
           },
         });
@@ -36,48 +38,47 @@ export const initRTC = (io: Server) => {
           return socket.emit("error", { message: "Access denied to board" });
         }
 
-        socket.join(boardTitle);
-        console.log(`${socket.id} joined RTC for board ${boardTitle}`);
-
-        // Start session in DB (optional)
-        await prisma.rTCSessions.create({
-          data: {
-            boardId: board.id,
-          },
+        socket.join(boardId);
+        console.log(`${socket.id} joined RTC for board ${board.title}`);
+        //optional later uncomment if needed
+        // await prisma.rTCSessions.create({
+        //   data: {
+        //     boardId: board.id,
+        //   },
+        // });
+        const usersInRoom = Array.from(io.of('/rtc').adapter.rooms.get(boardId) || []);
+        usersInRoom.forEach(id => {
+          if (id !== socket.id) {
+            socket.emit('user-joined', { socketId: id });
+            socket.to(id).emit('user-joined', { socketId: socket.id });
+          }
         });
-
-        socket.emit("joinedRTC", { boardTitle });
+        socket.emit("joinedRTC", { boardId });
       } catch (err) {
         console.error("joinRTC error:", err);
         socket.emit("error", { message: "Failed to join RTC" });
       }
     });
 
-    //initiate connection
-    socket.on("offer", ({ boardTitle, offer, to }) => {
+    socket.on("offer", ({ boardId, offer, to }) => {
       socket.to(to).emit("offer", { from: socket.id, offer });
     });
 
-
-    //Response to initialization
-    socket.on("answer", ({ boardTitle, answer, to }) => {
+    socket.on("answer", ({ boardId, answer, to }) => {
       socket.to(to).emit("answer", { from: socket.id, answer });
     });
 
-
-    //To find best NAT path 
-    socket.on("ice-candidate", ({ boardTitle, candidate, to }) => {
+    socket.on("ice-candidate", ({ boardId, candidate, to }) => {
       socket.to(to).emit("ice-candidate", { from: socket.id, candidate });
     });
 
-    socket.on("leaveRTC", async (boardTitle: string) => {
-      socket.leave(boardTitle);
-      console.log(`${socket.id} left RTC for board ${boardTitle}`);
+    socket.on("leaveRTC", async (boardId: string) => {
+      socket.leave(boardId);
+      console.log(`${socket.id} left RTC for board ${boardId}`);
 
-      // Optional: update session end time
       await prisma.rTCSessions.updateMany({
         where: {
-          board: { title: boardTitle },
+          board: { id: boardId },
           endedAt: null,
         },
         data: { endedAt: new Date() },

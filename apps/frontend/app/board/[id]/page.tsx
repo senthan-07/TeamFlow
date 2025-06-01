@@ -7,7 +7,7 @@ import { useBoardStore } from '../../../store/boardStore';
 import ChatSection from '../../../components/ChatPannel/Chat';
 import DrawBoard from '../../../components/draw/DrawBoard';
 import FileSection from '../../../components/files/File';
-// import RTCSection from '../../../components/board/RTCSection';
+import RTC from '../../../components/meeting/RTC';
 
 export default function BoardPage() {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +52,7 @@ export default function BoardPage() {
       <ChatSection boardId={currentBoard.id} />
       <DrawBoard boardId={currentBoard.id}/>
       <FileSection boardId={currentBoard.id} />
-      {/* <RTCSection boardId={currentBoard.id} /> */}
+      <RTC boardId={currentBoard.id} />
     </div>
   );
 }
