@@ -21,6 +21,7 @@ export interface Drawing {
 }
 
 export interface File {
+  size: number;
   id: string;
   boardId:string;
   filename: string;

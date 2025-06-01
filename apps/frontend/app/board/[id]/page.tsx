@@ -6,7 +6,7 @@ import api from '../../../lib/axios';
 import { useBoardStore } from '../../../store/boardStore';
 import ChatSection from '../../../components/ChatPannel/Chat';
 import DrawBoard from '../../../components/draw/DrawBoard';
-// import FileSection from '../../../components/board/FileSection';
+import FileSection from '../../../components/files/File';
 // import RTCSection from '../../../components/board/RTCSection';
 
 export default function BoardPage() {
@@ -51,7 +51,7 @@ export default function BoardPage() {
       {/* Collaboration Features */}
       <ChatSection boardId={currentBoard.id} />
       <DrawBoard boardId={currentBoard.id}/>
-      {/* <FileSection boardId={currentBoard.id} /> */}
+      <FileSection boardId={currentBoard.id} />
       {/* <RTCSection boardId={currentBoard.id} /> */}
     </div>
   );

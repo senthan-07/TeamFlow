@@ -14,6 +14,8 @@ import { drawRouter } from "./routes/Draw";
 import { chatRouter } from "./routes/Chat";
 import { fileRouter } from "./routes/File";
 import RTCrouter from "./routes/RTC";
+import path from "path";
+const uploadPath = ''
 
 const app = express();
 const prisma = new PrismaClient();
@@ -35,6 +37,17 @@ app.use("/draw",drawRouter)
 app.use("/chat",chatRouter)
 app.use("/files",fileRouter)
 app.use("/rtc",RTCrouter)
+
+console.log("Serving uploads from:", path.join(__dirname, '../uploads'));
+console.log("Process cwd:", process.cwd());
+
+app.get('/testfile', (req, res) => {
+  res.sendFile(path.join(__dirname, '../uploads', '1748179502709-189706323.jpg'));
+});
+
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 
 initChatSocket(io);
 initDrawSocket(io);

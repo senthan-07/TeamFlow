@@ -10,7 +10,7 @@ interface UploadRequest extends Request {
   file?: Express.Multer.File;
   userId?: string;
   body: {
-    title: string;
+    id: string;
   };
 }
 
@@ -18,13 +18,13 @@ interface UploadRequest extends Request {
 const prisma = new PrismaClient();
 
 //Get all files from board
-const getHandler = async (req: Request<{ title: string }>, res: Response) => {
-  const { title } = req.params;
+const getHandler = async (req: Request<{ id: string }>, res: Response) => {
+  const { id } = req.params;
   const userId = req.userId;
 
   const board = await prisma.board.findFirst({
     where: {
-      title,
+      id:id,
       OR: [{ ownerId: userId }, { users: { some: { id: userId } } }],
     },
   });
@@ -45,7 +45,7 @@ const getHandler = async (req: Request<{ title: string }>, res: Response) => {
 //Upload files
 const sendHandler = async (req: UploadRequest, res: Response) => {
   const userId = req.userId;
-  const { title } = req.body;
+  const { id} = req.params;
   const file = req.file;
 
   if(!userId){
@@ -60,7 +60,7 @@ const sendHandler = async (req: UploadRequest, res: Response) => {
 
   const board = await prisma.board.findFirst({
     where: {
-      title,
+      id:id,
       OR: [{ ownerId: userId }, { users: { some: { id: userId } } }],
     },
   });
@@ -86,12 +86,12 @@ const sendHandler = async (req: UploadRequest, res: Response) => {
 
 
 
-const deleteHandler = async (req: Request<{ title: string; id: string }>,res: Response) => {
-  const { id } = req.params;
+const deleteHandler = async (req: Request<{boardId: string , fileId:string}>,res: Response) => {
+  const { boardId , fileId } = req.params;
   const userId = req.userId;
 
   try {
-    const file = await prisma.file.findUnique({ where: { id } });
+    const file = await prisma.file.findUnique({ where: { id:fileId } });
 
     if (!file) {
       res.status(404).json({ error: "File not found" });
@@ -100,7 +100,7 @@ const deleteHandler = async (req: Request<{ title: string; id: string }>,res: Re
 
     // Check ownership
     const board = await prisma.board.findUnique({
-      where: { id: file.boardId },
+      where: { id: boardId },
       select: { ownerId: true },
     });
 
@@ -119,7 +119,7 @@ const deleteHandler = async (req: Request<{ title: string; id: string }>,res: Re
     }
 
     // Delete from database
-    await prisma.file.delete({ where: { id } });
+    await prisma.file.delete({ where: {id:fileId } });
     res.status(200).json({ message: "File deleted successfully" });
 
   } catch (err) {
