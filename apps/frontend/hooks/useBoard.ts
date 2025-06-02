@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import api from "../lib/axios"; 
 import { useBoardStore } from "../store/boardStore";
-import { useAuthStore } from "@/store/authStore";
 
 export function useBoards() {
   const { boards, setBoards, addBoard, removeBoard } = useBoardStore();

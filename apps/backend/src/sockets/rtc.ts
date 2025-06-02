@@ -47,6 +47,10 @@ export const initRTC = (io: Server) => {
         //   },
         // });
         const usersInRoom = Array.from(io.of('/rtc').adapter.rooms.get(boardId) || []);
+        //  usersInRoom.forEach(id => {
+        //   console.log(`${id} is in room`)
+        //   }
+        //  );
         usersInRoom.forEach(id => {
           if (id !== socket.id) {
             socket.emit('user-joined', { socketId: id });

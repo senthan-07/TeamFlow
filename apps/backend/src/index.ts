@@ -38,8 +38,8 @@ app.use("/chat",chatRouter)
 app.use("/files",fileRouter)
 app.use("/rtc",RTCrouter)
 
-console.log("Serving uploads from:", path.join(__dirname, '../uploads'));
-console.log("Process cwd:", process.cwd());
+// console.log("Serving uploads from:", path.join(__dirname, '../uploads'));
+// console.log("Process cwd:", process.cwd());
 
 app.get('/testfile', (req, res) => {
   res.sendFile(path.join(__dirname, '../uploads', '1748179502709-189706323.jpg'));

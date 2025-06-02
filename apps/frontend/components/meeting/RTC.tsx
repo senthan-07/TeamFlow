@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useSocket } from '../../hooks/useSocket';
 
 interface RTCProps {
@@ -23,83 +23,94 @@ export default function RTC({ boardId }: RTCProps) {
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
-  const { socket, connected } = useSocket<SignalData>({
+  const { socket } = useSocket<SignalData>({
     namespace: 'rtc',
     boardId,
-    onConnect: async (socket) => {
+    onConnect: (socket) => {
       socket.emit('joinRTC', boardId);
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      localStreamRef.current = stream;
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-
-      const newPeer = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-        ],
+      socket.on('user-joined', ({ socketId }: { socketId: string }) => {
+        console.log('User joined:', socketId);
+        setRemoteSocketId(socketId);
       });
-
-      stream.getTracks().forEach((track) => newPeer.addTrack(track, stream));
-
-      newPeer.onicecandidate = (event) => {
-        if (event.candidate && remoteSocketId && socket) {
-          socket.emit('ice-candidate', {
-            boardId,
-            to: remoteSocketId,
-            candidate: event.candidate.toJSON(),
-          });
-        }
-      };
-
-      newPeer.ontrack = (event) => {
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
-
-      setPeer(newPeer);
     },
 
-    onCustomEvent: (event, handler) => {
-        if (!socket) return;
+    onCustomEvent: () => {
+      if (!socket) return;
 
-        socket.on('user-joined', ({ socketId }: { socketId: string }) => {
-            console.log('User joined:', socketId);
-            setRemoteSocketId(socketId); // Set socket ID of peer to call
-        });
+      socket.on('offer', async ({ from, offer }: SignalData) => {
+        setRemoteSocketId(from);
 
-        socket.on('offer', async ({ from, offer }: SignalData) => {
-            setRemoteSocketId(from);
-            await peer?.setRemoteDescription(new RTCSessionDescription(offer!));
-            const answer = await peer!.createAnswer();
-            await peer!.setLocalDescription(answer);
-            socket.emit('answer', { boardId, to: from, answer });
-        });
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localStreamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
 
-        socket.on('answer', async ({ answer }: SignalData) => {
-            await peer?.setRemoteDescription(new RTCSessionDescription(answer!));
-        });
+        const newPeer = createPeerConnection(stream, from);
+        setPeer(newPeer);
 
-        socket.on('ice-candidate', async ({ candidate }: SignalData) => {
-            await peer?.addIceCandidate(new RTCIceCandidate(candidate!));
-        });
-        },
+        await newPeer.setRemoteDescription(new RTCSessionDescription(offer!));
+        const answer = await newPeer.createAnswer();
+        await newPeer.setLocalDescription(answer);
+        socket.emit('answer', { boardId, to: from, answer });
+      });
 
+      socket.on('answer', async ({ answer }: SignalData) => {
+        await peer?.setRemoteDescription(new RTCSessionDescription(answer!));
+      });
+
+      socket.on('ice-candidate', async ({ candidate }: SignalData) => {
+        await peer?.addIceCandidate(new RTCIceCandidate(candidate!));
+      });
+    },
   });
 
-    const handleCallUser = async () => {
-        if (!socket || !peer || !remoteSocketId) {
-            alert('No peer to call yet.');
-            return;
-        }
-        const offer = await peer.createOffer();
-        await peer.setLocalDescription(offer);
-        socket.emit('offer', { boardId, to: remoteSocketId, offer });
+  const createPeerConnection = (stream: MediaStream, targetSocketId: string | null) => {
+    const newPeer = new RTCPeerConnection({
+      iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+    });
+
+    stream.getTracks().forEach((track) => newPeer.addTrack(track, stream));
+
+    newPeer.onicecandidate = (event) => {
+      if (event.candidate && targetSocketId && socket) {
+        socket.emit('ice-candidate', {
+          boardId,
+          to: targetSocketId,
+          candidate: event.candidate.toJSON(),
+        });
+      }
     };
 
+    newPeer.ontrack = (event) => {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = event.streams[0];
+      }
+    };
+
+    return newPeer;
+  };
+
+  const handleCallUser = async () => {
+    if (!socket || !remoteSocketId) {
+      alert('No peer to call yet.');
+      return;
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    localStreamRef.current = stream;
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = stream;
+    }
+
+    const newPeer = createPeerConnection(stream, remoteSocketId);
+    setPeer(newPeer);
+
+    const offer = await newPeer.createOffer();
+    await newPeer.setLocalDescription(offer);
+    socket.emit('offer', { boardId, to: remoteSocketId, offer });
+  };
 
   return (
     <div className="space-y-4">

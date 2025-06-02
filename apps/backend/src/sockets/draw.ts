@@ -78,13 +78,13 @@ export const initDrawSocket = (io: Server) => {
 
       // Broadcast the drawing path to others in the same board room
       socket.to(boardId).emit("newStroke", path);
-      console.log(`${userId} path = ${path}`)
+      // console.log(`${userId} path = ${path}`)
     });
 
     socket.on("cursorMove", ({ boardId, position }) => {
       const userId = socket.data.userId;
       socket.to(boardId).emit("cursorMove", { userId, position });
-      console.log(`${userId} position = ${position}`)
+      // console.log(`${userId} position = ${position}`)
     });
 
     socket.on("saveDrawing", async ({ boardId, data }) => {
