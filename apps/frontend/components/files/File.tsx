@@ -15,7 +15,7 @@ export default function FileSection({ boardId }: Props) {
 
   useEffect(() => {
     fetchFiles();
-  }, [boardId]);
+  }, [boardId, fetchFiles]);
 
   const handleUpload = async () => {
     const file = fileRef.current?.files?.[0];

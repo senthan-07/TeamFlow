@@ -24,7 +24,7 @@ export default function DrawComponent({ boardId }: Props) {
     startStroke,
     endStroke,
     setStrokes,
-    clear,
+    // clear,
   } = useDrawStore();
 
   const [remoteCursors, setRemoteCursors] = useState<Record<string, Point>>({});
