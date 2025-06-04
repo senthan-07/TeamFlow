@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSocket } from '../../hooks/useSocket';
 
 interface RTCProps {
@@ -18,14 +18,15 @@ interface SignalData {
 
 export default function RTC({ boardId }: RTCProps) {
   const [remoteSocketId, setRemoteSocketId] = useState<string | null>(null);
-  const [peer, setPeer] = useState<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const peerRef = useRef<RTCPeerConnection | null>(null);
 
   const { socket } = useSocket<SignalData>({
     namespace: 'rtc',
     boardId,
+
     onConnect: (socket) => {
       socket.emit('joinRTC', boardId);
 
@@ -40,33 +41,48 @@ export default function RTC({ boardId }: RTCProps) {
 
       socket.on('offer', async ({ from, offer }: SignalData) => {
         setRemoteSocketId(from);
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          localStreamRef.current = stream;
+          if (localVideoRef.current) {
+            localVideoRef.current.srcObject = stream;
+          }
 
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        localStreamRef.current = stream;
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
+          const newPeer = createPeerConnection(stream, from, socket);
+          peerRef.current = newPeer;
+
+          await newPeer.setRemoteDescription(new RTCSessionDescription(offer!));
+          const answer = await newPeer.createAnswer();
+          await newPeer.setLocalDescription(answer);
+          socket.emit('answer', { boardId, to: from, answer });
+        } catch (err) {
+          console.error('Error handling offer:', err);
         }
-
-        const newPeer = createPeerConnection(stream, from);
-        setPeer(newPeer);
-
-        await newPeer.setRemoteDescription(new RTCSessionDescription(offer!));
-        const answer = await newPeer.createAnswer();
-        await newPeer.setLocalDescription(answer);
-        socket.emit('answer', { boardId, to: from, answer });
       });
 
       socket.on('answer', async ({ answer }: SignalData) => {
-        await peer?.setRemoteDescription(new RTCSessionDescription(answer!));
+        try {
+          await peerRef.current?.setRemoteDescription(new RTCSessionDescription(answer!));
+        } catch (err) {
+          console.error('Error handling answer:', err);
+        }
       });
 
       socket.on('ice-candidate', async ({ candidate }: SignalData) => {
-        await peer?.addIceCandidate(new RTCIceCandidate(candidate!));
+        try {
+          await peerRef.current?.addIceCandidate(new RTCIceCandidate(candidate!));
+        } catch (err) {
+          console.error('Error adding ICE candidate:', err);
+        }
       });
     },
   });
 
-  const createPeerConnection = (stream: MediaStream, targetSocketId: string | null) => {
+  const createPeerConnection = (
+    stream: MediaStream,
+    targetSocketId: string,
+    socket: ReturnType<typeof useSocket>['socket']
+  ) => {
     const newPeer = new RTCPeerConnection({
       iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
     });
@@ -74,7 +90,7 @@ export default function RTC({ boardId }: RTCProps) {
     stream.getTracks().forEach((track) => newPeer.addTrack(track, stream));
 
     newPeer.onicecandidate = (event) => {
-      if (event.candidate && targetSocketId && socket) {
+      if (event.candidate && socket) {
         socket.emit('ice-candidate', {
           boardId,
           to: targetSocketId,
@@ -98,19 +114,30 @@ export default function RTC({ boardId }: RTCProps) {
       return;
     }
 
-    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    localStreamRef.current = stream;
-    if (localVideoRef.current) {
-      localVideoRef.current.srcObject = stream;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      const newPeer = createPeerConnection(stream, remoteSocketId, socket);
+      peerRef.current = newPeer;
+
+      const offer = await newPeer.createOffer();
+      await newPeer.setLocalDescription(offer);
+      socket.emit('offer', { boardId, to: remoteSocketId, offer });
+    } catch (err) {
+      console.error('Error starting call:', err);
     }
-
-    const newPeer = createPeerConnection(stream, remoteSocketId);
-    setPeer(newPeer);
-
-    const offer = await newPeer.createOffer();
-    await newPeer.setLocalDescription(offer);
-    socket.emit('offer', { boardId, to: remoteSocketId, offer });
   };
+
+  useEffect(() => {
+    return () => {
+      peerRef.current?.close();
+      localStreamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
 
   return (
     <div className="space-y-4">
