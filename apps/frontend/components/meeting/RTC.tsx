@@ -36,10 +36,11 @@ export default function RTC({ boardId }: RTCProps) {
       });
     },
 
-    onCustomEvent: () => {
+    onCustomEvent: (socket) => {
       if (!socket) return;
 
       socket.on('offer', async ({ from, offer }: SignalData) => {
+        console.log('📨 Received offer from', from);
         setRemoteSocketId(from);
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -61,6 +62,7 @@ export default function RTC({ boardId }: RTCProps) {
       });
 
       socket.on('answer', async ({ answer }: SignalData) => {
+        console.log('📨 Received answer');
         try {
           await peerRef.current?.setRemoteDescription(new RTCSessionDescription(answer!));
         } catch (err) {
@@ -102,6 +104,7 @@ export default function RTC({ boardId }: RTCProps) {
     newPeer.ontrack = (event) => {
       if (remoteVideoRef.current) {
         remoteVideoRef.current.srcObject = event.streams[0];
+        // remoteVideoRef.current.muted = false; //always unmuted
       }
     };
 
@@ -144,7 +147,7 @@ export default function RTC({ boardId }: RTCProps) {
       <h2 className="text-xl font-semibold">Video Call</h2>
       <div className="flex space-x-4">
         <video ref={localVideoRef} autoPlay muted playsInline className="w-1/2 rounded" />
-        <video ref={remoteVideoRef} autoPlay playsInline className="w-1/2 rounded" />
+        <video ref={remoteVideoRef} autoPlay playsInline  className="w-1/2 rounded" />
       </div>
       <button
         onClick={handleCallUser}

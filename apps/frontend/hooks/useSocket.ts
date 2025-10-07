@@ -10,7 +10,7 @@ interface UseSocketProps<T> {
   onConnect?: (socket: Socket) => void;
   onDisconnect?: () => void;
   onError?: (error: any) => void;
-  onCustomEvent?: (event: string, handler: (data: T) => void) => void;
+  onCustomEvent?: (socket: Socket) => void;
 }
 
 export function useSocket<T>({ namespace, boardId, onConnect, onDisconnect, onError, onCustomEvent }: UseSocketProps<T>) {
@@ -32,7 +32,8 @@ export function useSocket<T>({ namespace, boardId, onConnect, onDisconnect, onEr
       setConnected(true);
       console.log(`Socket connected on namespace /${namespace}:`, socket.id);
       socket.emit('joinBoard', boardId);
-      onConnect && onConnect(socket);
+      onConnect?.(socket);
+      onCustomEvent?.(socket);
     });
 
     socket.on('disconnect', () => {
@@ -45,14 +46,6 @@ export function useSocket<T>({ namespace, boardId, onConnect, onDisconnect, onEr
       console.error(`Socket error on namespace /${namespace}:`, error);
       onError && onError(error);
     });
-
-    if (onCustomEvent) {
-      // Example for listening to a custom event named 'data'
-      // You can adapt this to listen to multiple or dynamic events if needed
-      onCustomEvent('data', (data: T) => {
-        // handle the data event in parent component
-      });
-    }
 
     return () => {
       if (socket.connected) {
