@@ -17,6 +17,8 @@ interface SignalData {
 }
 
 export default function RTC({ boardId }: RTCProps) {
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const [isCameraPaused, setIsCameraPaused] = useState(false);
   const [remoteSocketId, setRemoteSocketId] = useState<string | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -142,6 +144,25 @@ export default function RTC({ boardId }: RTCProps) {
     };
   }, []);
 
+  const toggleMic = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getAudioTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
+      setIsMicMuted((prev) => !prev);
+    }
+  };
+
+  const toggleCamera = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getVideoTracks().forEach((track) => {
+        track.enabled = !track.enabled;
+      });
+      setIsCameraPaused((prev) => !prev);
+    }
+  };
+
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold">Video Call</h2>
@@ -155,6 +176,20 @@ export default function RTC({ boardId }: RTCProps) {
       >
         Start Call
       </button>
+      <div className="space-x-2">
+        <button
+          onClick={toggleMic}
+          className="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700"
+        >
+          {isMicMuted ? 'Unmute Mic' : 'Mute Mic'}
+        </button>
+        <button
+          onClick={toggleCamera}
+          className="px-4 py-2 bg-gray-600 text-white rounded shadow hover:bg-gray-700"
+        >
+          {isCameraPaused ? 'Resume Camera' : 'Pause Camera'}
+        </button>
+      </div>
     </div>
   );
 }
