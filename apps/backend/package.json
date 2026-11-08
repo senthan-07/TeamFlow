@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "nodemon src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node scripts/migrate.mjs && node dist/index.js",
     "postinstall": "prisma generate",
-    "test:smoke": "node test/smoke.mjs"
+    "test:smoke": "node test/smoke.mjs",
+    "migrate": "node scripts/migrate.mjs"
   },
   "keywords": [],
   "author": "",
