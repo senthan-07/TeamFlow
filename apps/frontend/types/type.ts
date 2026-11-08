@@ -1,61 +1,81 @@
+/** Shapes returned by the TeamFlow API. */
+
 export interface User {
   id: string;
-  name: string;
+  name: string | null;
   email: string;
 }
 
-export interface Chat {
+/** GET /board/all */
+export interface BoardSummary {
   id: string;
-  boardid:string,
-  message: string;
-  user: User;
+  title: string;
   createdAt: string;
+  updatedAt: string;
+  lastActivity: string;
+  isOwner: boolean;
+  owner: User;
+  users: User[];
+  _count: { chats: number; files: number };
 }
 
-export interface Drawing {
+/** POST /board/new */
+export interface CreatedBoard extends BoardSummary {
+  notFoundEmails: string[];
+}
+
+/** GET /board/:id */
+export interface BoardDetail {
   id: string;
-  data: string; 
-  boardId : string;
+  title: string;
+  ownerId: string;
+  isOwner: boolean;
+  owner: User;
+  users: User[];
   createdAt: string;
   updatedAt: string;
 }
 
-export interface File {
-  size: number;
+export interface ChatMessage {
   id: string;
-  boardId:string;
-  filename: string;
-  url: string;
-  uploadedBy: User;
+  boardId: string;
+  userId: string;
+  message: string;
   createdAt: string;
+  user: User;
 }
 
-export interface RTCSessions {
+export interface BoardFile {
   id: string;
-  boardId:string;
-  startedAt: string;
-  endedAt:string;
+  boardId: string;
+  userId: string;
+  url: string;
+  filename: string;
+  mimetype: string;
+  size: number;
+  createdAt: string;
+  user: User;
 }
 
+export type Tool = "pen" | "highlighter" | "eraser";
 
-
-export interface PathPoint {
-  x: number;
-  y: number;
+/** A stroke in world coordinates; `points` is flat [x0, y0, x1, y1, …]. */
+export interface Stroke {
+  id: string;
+  userId: string;
+  tool: Tool;
   color: string;
   size: number;
+  points: number[];
 }
 
-export interface Cursor {
+export interface PresenceUser {
   userId: string;
-  position: { x: number; y: number };
+  name: string;
 }
 
-export interface DrawState {
-  paths: PathPoint[][];
-  cursors: Cursor[];
-  addPath: (path: PathPoint[]) => void;
-  updateCursor: (cursor: Cursor) => void;
-  setPaths: (paths: PathPoint[][]) => void;
-  clear: () => void;
+export interface CallParticipant extends PresenceUser {
+  socketId: string;
+  audio: boolean;
+  video: boolean;
 }

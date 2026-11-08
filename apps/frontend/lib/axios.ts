@@ -1,17 +1,26 @@
-import axios from 'axios';
-import { useAuthStore } from "@/store/authStore";
+import axios from "axios";
+import { useAuthStore } from "../store/authStore";
+import { API_URL } from "./config";
 
-//Basically middleware for adding bearer token
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api',
-});
+const api = axios.create({ baseURL: API_URL });
 
-//intercerptor is like burp intercept req check if its in browser then add bearer token
+// Attach the bearer token to every request.
 api.interceptors.request.use((config) => {
-  // const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const token = useAuthStore.getState().token;
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
+
+// An expired or revoked token signs the user out; AuthGuard then sends them to /login.
+api.interceptors.response.use(
+  (res) => res,
+  (error) => {
+    const isAuthCall = error.config?.url?.startsWith("/auth/sign");
+    if (error.response?.status === 401 && !isAuthCall && useAuthStore.getState().token) {
+      useAuthStore.getState().logout({ expired: true });
+    }
+    return Promise.reject(error);
+  },
+);
 
 export default api;

@@ -1,24 +1,300 @@
 @import "tailwindcss";
 
-/* :root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: 'Geist Sans', sans-serif;
-  --font-mono: 'Geist Mono', monospace;
+/*
+ * TeamFlow design tokens.
+ *
+ * Two base colours, swapped between modes, so every component inverts with no extra
+ * work. Everything else is derived from them:
+ *   text steps   fg/80 body · fg/60 supporting · fg/50 labels
+ *   hairline     fg at 11% (light) · cerulean at 26% (dark)
+ *   signal       reserved for active states only (selected tool, live, focus, unread)
+ */
+:root {
+  --bg: #f4f3ef; /* bone */
+  --fg: #0b0b0b;
+  --signal: #ff3b00; /* orange */
+  --on-signal: #0b0b0b;
+  --hairline: color-mix(in srgb, var(--fg) 11%, transparent);
+  --hairline-strong: color-mix(in srgb, var(--fg) 22%, transparent);
+
+  /* 3D structure: dark graphite parts */
+  --struct-top: #262626;
+  --struct-left: #101010;
+  --struct-right: #1a1a1a;
+  --struct-edge: rgb(244 243 239 / 0.14);
+  --struct-ink: rgb(244 243 239 / 0.72);
+
+  --danger: #c42b1c;
+  --glow: rgb(11 11 11 / 0.10);
+
+  color-scheme: light;
 }
 
+/* Dark: follows the system unless the user picked a theme (html[data-theme]). */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-} */
+  :root:not([data-theme="light"]) {
+    --bg: #0a0a0a; /* jet */
+    --fg: #f4f3ef;
+    --signal: #ff2950; /* neon rose */
+    --hairline: rgb(42 157 244 / 0.26); /* cerulean */
+    --hairline-strong: rgb(42 157 244 / 0.45);
 
-/* Global base styles */
-/* body {
-  background-color: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-} */
+    /* 3D structure: cerulean */
+    --struct-top: #11344f;
+    --struct-left: #0a2335;
+    --struct-right: #0e2c44;
+    --struct-edge: rgb(166 220 250 / 0.55);
+    --struct-ink: #a6dcfa;
+
+    --danger: #ff6b5e;
+    --glow: rgb(42 157 244 / 0.22);
+
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --bg: #0a0a0a; /* jet */
+    --fg: #f4f3ef;
+    --signal: #ff2950; /* neon rose */
+    --hairline: rgb(42 157 244 / 0.26); /* cerulean */
+    --hairline-strong: rgb(42 157 244 / 0.45);
+
+    /* 3D structure: cerulean */
+    --struct-top: #11344f;
+    --struct-left: #0a2335;
+    --struct-right: #0e2c44;
+    --struct-edge: rgb(166 220 250 / 0.55);
+    --struct-ink: #a6dcfa;
+
+    --danger: #ff6b5e;
+    --glow: rgb(42 157 244 / 0.22);
+
+    color-scheme: dark;
+  }
+
+/* Derived tokens (follow the base swap automatically). */
+:root {
+  --paper: var(--bg);
+  --sheet: color-mix(in srgb, var(--fg) 2.5%, var(--bg));
+  --sheet-2: color-mix(in srgb, var(--fg) 6%, var(--bg));
+  --ink: var(--fg);
+  --ink-2: color-mix(in srgb, var(--fg) 80%, var(--bg));
+  --muted: color-mix(in srgb, var(--fg) 60%, var(--bg));
+  --label: color-mix(in srgb, var(--fg) 50%, var(--bg));
+  --line: var(--hairline);
+  --line-strong: var(--hairline-strong);
+  --dot: var(--hairline-strong);
+
+  --brand: var(--fg); /* primary actions are ink-on-bone, inverted */
+  --brand-hover: color-mix(in srgb, var(--fg) 84%, var(--bg));
+  --brand-soft: color-mix(in srgb, var(--fg) 6%, var(--bg));
+  --on-brand: var(--bg);
+  --brass: var(--signal);
+  --brass-soft: color-mix(in srgb, var(--signal) 12%, var(--bg));
+  --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--bg));
+
+  /* Marker inks as drawn on the landing demo sheet. */
+  --marker-ultramarine: #2f4bd8;
+  --marker-vermilion: #d9432a;
+  --marker-emerald: #0e8a6a;
+  --marker-plum: #8b3fa8;
+  --marker-teal: #17839a;
+  --marker-amber: #b7791f;
+
+  --shadow-sheet: 0 0 #0000;
+  --shadow-float: 0 1px 0 var(--hairline), 0 24px 48px -28px rgb(0 0 0 / 0.35);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-sheet-2: var(--sheet-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-label: var(--label);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-soft: var(--brand-soft);
+  --color-on-brand: var(--on-brand);
+  --color-signal: var(--signal);
+  --color-on-signal: var(--on-signal);
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --font-hand: var(--font-caveat), cursive;
+
+  --shadow-sheet: var(--shadow-sheet);
+  --shadow-float: var(--shadow-float);
+
+  --radius-control: 6px;
+  --radius-panel: 10px;
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    /* Not var(--font-sans): @theme inline doesn't emit it as a runtime variable. */
+    font-family: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--signal) 28%, transparent);
+    color: var(--fg);
+  }
+
+  :focus-visible {
+    outline: 1.5px solid var(--signal);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@layer components {
+  /* Display: Instrument Serif. The second line (.display-dim) is italic and dimmed. */
+  .display,
+  .display-md,
+  .display-sm {
+    font-family: var(--font-instrument), ui-serif, Georgia, serif;
+    font-weight: 400;
+  }
+  .display {
+    font-size: clamp(2.75rem, 6.5vw, 7.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+  }
+  .display-md {
+    font-size: clamp(2.5rem, 5vw, 5.25rem);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+  }
+  .display-sm {
+    font-size: clamp(2.25rem, 3.4vw, 3.25rem);
+    line-height: 1;
+    letter-spacing: -0.025em;
+  }
+  .display-dim {
+    display: block;
+    font-style: italic;
+    color: var(--muted);
+  }
+
+  /* Metadata: JetBrains Mono, always with an index ([03 · Scale], 02 / 06). */
+  .meta {
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--label);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .dot-grid {
+    background-image: radial-gradient(var(--dot) 1px, transparent 1.2px);
+    background-size: 22px 22px;
+  }
+  .hairline-grid {
+    background-image: linear-gradient(var(--hairline) 1px, transparent 1px), linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Dialog entrance: answers the action that opened it. */
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+dialog[open] {
+  animation: dialog-in 220ms var(--ease-out-quint);
+}
+dialog[open]::backdrop {
+  animation: backdrop-in 220ms ease-out;
+}
+
+/* The landing page's one orchestrated moment: the board's layers separate. */
+@keyframes iso-explode {
+  from {
+    transform: translateY(var(--from, 0px));
+  }
+}
+@keyframes iso-fade {
+  from {
+    opacity: 0;
+  }
+}
+.iso-plate {
+  animation: iso-explode 1.1s var(--ease-out-quint) both;
+  animation-delay: calc(250ms + var(--i, 0) * 90ms);
+}
+.iso-label {
+  animation: iso-fade 600ms ease-out both;
+  animation-delay: calc(1000ms + var(--i, 0) * 90ms);
+}
+
+/* Hero entrance: one orchestrated rise on load. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+.rise {
+  animation: rise 900ms var(--ease-out-quint) both;
+  animation-delay: var(--d, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,25 +1,19 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-'use client';
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import AuthShell from "../../components/auth/AuthShell";
+import AuthForm from "../../components/auth/AuthForm";
+import { GuestOnly } from "../../components/auth/AuthGuard";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../hooks/useAuth';
-import AuthForm from '../../components/Auth/AuthForm';
+export const metadata: Metadata = { title: "Create account" };
 
-
-export default function RegisterPage() {
-  const { register } = useAuth();
-  const router = useRouter();
-  const [error, setError] = useState('');
-
-  const handleRegister = async (name: string, email: string, password: string) => {
-    try {
-      await register(name, email, password);
-      router.push('/dashboard');
-    } catch (err) {
-      setError('Failed to register');
-    }
-  };
-
-  return <AuthForm mode="register" onSubmit={handleRegister} error={error} />;
+export default function Page() {
+  return (
+    <GuestOnly>
+      <AuthShell>
+        <Suspense>
+          <AuthForm mode="register" />
+        </Suspense>
+      </AuthShell>
+    </GuestOnly>
+  );
 }
