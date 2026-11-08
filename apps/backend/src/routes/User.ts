@@ -1,10 +1,11 @@
-import  express, { Router }  from "express";
-import { getUserHandler ,patchHandler , getBoardHandler } from "../controllers/Userhandler";
+import { Router } from "express";
+import { getMeHandler, patchMeHandler } from "../controllers/Userhandler";
 import authenticateToken from "../middlewares/Authmiddleware";
-const userRouter = Router()
 
-userRouter.get("/:id",authenticateToken,getUserHandler);
-userRouter.get("/:id/boards",authenticateToken,getBoardHandler);
-userRouter.patch("/:id",authenticateToken,patchHandler)
+const userRouter = Router();
+userRouter.use(authenticateToken);
 
-export {userRouter}
+userRouter.get("/me", getMeHandler);
+userRouter.patch("/me", patchMeHandler);
+
+export { userRouter };

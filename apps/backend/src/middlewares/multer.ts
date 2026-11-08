@@ -1,15 +1,21 @@
 import multer from "multer";
 import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+import { config } from "../config";
 
-// Store files locally for now in uploads later upgrade if needed
+fs.mkdirSync(config.uploadDir, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/"); //cb is callback and first is null if error happens null gets passed else file path
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + path.extname(file.originalname)); //extname is extension format like pdf
+  destination: (_req, _file, cb) => cb(null, config.uploadDir),
+  filename: (_req, file, cb) => {
+    // Random name on disk; the original name is kept in the DB for display.
+    const ext = path.extname(file.originalname).toLowerCase().replace(/[^.a-z0-9]/g, "");
+    cb(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`);
   },
 });
 
-export const upload = multer({ storage });
+export const upload = multer({
+  storage,
+  limits: { fileSize: config.maxUploadBytes, files: 1 },
+});

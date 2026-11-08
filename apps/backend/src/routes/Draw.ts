@@ -1,10 +1,11 @@
-import  express, { Router }  from "express";
-import { deleteHandler, getDrawingHandler, saveDrawingHandler } from "../controllers/DrawHandler";
+import { Router } from "express";
+import { deleteHandler, getDrawingHandler } from "../controllers/DrawHandler";
 import authenticateToken from "../middlewares/Authmiddleware";
-const drawRouter = Router()
 
-drawRouter.get("/:title",authenticateToken,getDrawingHandler);
-drawRouter.post("/save/:title",authenticateToken,saveDrawingHandler);
-drawRouter.delete("/delete/:title",authenticateToken,deleteHandler);
+const drawRouter = Router();
+drawRouter.use(authenticateToken);
 
-export {drawRouter}
+drawRouter.get("/:boardId", getDrawingHandler);
+drawRouter.delete("/:boardId", deleteHandler);
+
+export { drawRouter };

@@ -2,3 +2,6 @@ node_modules
 # Keep environment variables out of version control
 .env
 uploads
+# Prisma generates its client into node_modules; never commit generated output
+src/generated
+dist

@@ -1,11 +1,13 @@
-import  express, { Router }  from "express";
+import { Router } from "express";
 import { deleteHandler, getHandler, sendHandler } from "../controllers/FileHandler";
 import authenticateToken from "../middlewares/Authmiddleware";
 import { upload } from "../middlewares/multer";
-const fileRouter = Router()
 
-fileRouter.get("/:id",authenticateToken,getHandler);
-fileRouter.post("/:id",authenticateToken,upload.single("file"),sendHandler);
-fileRouter.delete("/:boardId/:fileId",authenticateToken,deleteHandler);
+const fileRouter = Router();
+fileRouter.use(authenticateToken);
 
-export {fileRouter}
+fileRouter.get("/:boardId", getHandler);
+fileRouter.post("/:boardId", upload.single("file"), sendHandler);
+fileRouter.delete("/:boardId/:fileId", deleteHandler);
+
+export { fileRouter };

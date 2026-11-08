@@ -1,12 +1,5 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  
 }
 
 datasource db {
@@ -15,72 +8,78 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  name      String?
-  password  String    
-  boards    Board[]   @relation("BoardUsers")      // boards where user is a collaborator (users)
-  ownedBoards Board[] @relation("BoardOwner")      // boards where user is the owner
-  chats     Chat[]
-  files     File[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  password    String
+  boards      Board[]  @relation("BoardUsers") // boards where user is a collaborator
+  ownedBoards Board[]  @relation("BoardOwner") // boards where user is the owner
+  chats       Chat[]
+  files       File[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Board {
-  id          String       @id @default(cuid())
-  title       String       @unique 
+  id          String        @id @default(cuid())
+  // Titles are no longer globally unique: two people can both have a "Sprint 12" board.
+  title       String
   ownerId     String
-  owner       User         @relation("BoardOwner", fields: [ownerId], references: [id])
-  users       User[]       @relation("BoardUsers")
-  drawings    Drawing[]    
+  owner       User          @relation("BoardOwner", fields: [ownerId], references: [id])
+  users       User[]        @relation("BoardUsers")
+  drawings    Drawing[]
   chats       Chat[]
   files       File[]
   rtcSessions RTCSessions[]
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([ownerId])
 }
 
-
 model Drawing {
-  id          String    @id @default(cuid())
-  boardId     String    @unique
-  board       Board     @relation(fields: [boardId], references: [id])
-  // You can store serialized drawing data or JSON of drawing actions
-  data        Json
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String   @id @default(cuid())
+  boardId   String   @unique
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  // Array of strokes: { id, userId, color, size, tool, points: [x, y][] }
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Chat {
-  id          String    @id @default(cuid())
-  boardId     String
-  board       Board     @relation(fields: [boardId], references: [id])
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  message     String
-  createdAt   DateTime  @default(now())
+  id        String   @id @default(cuid())
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([boardId, createdAt])
 }
 
 model File {
-  id          String    @id @default(cuid())
-  boardId     String
-  board       Board     @relation(fields: [boardId], references: [id])
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  url         String    // URL to the file storage (S3, Cloud, etc)
-  filename    String
-  mimetype    String
-  size        Int
-  createdAt   DateTime  @default(now())
+  id        String   @id @default(cuid())
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  url       String
+  filename  String
+  mimetype  String
+  size      Int
+  createdAt DateTime @default(now())
+
+  @@index([boardId, createdAt])
 }
 
 model RTCSessions {
-  id          String    @id @default(cuid())
-  boardId     String
-  board       Board     @relation(fields: [boardId], references: [id])
-  startedAt   DateTime  @default(now())
-  endedAt     DateTime?
-  // Optionally store session metadata, participants, logs
-}
+  id        String    @id @default(cuid())
+  boardId   String
+  board     Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
 
+  @@index([boardId, startedAt])
+}

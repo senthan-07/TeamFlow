@@ -1,130 +1,41 @@
-import { PrismaClient } from "@prisma/client";
-import dotenv from "dotenv";
 import { Request, Response } from "express";
-dotenv.config();
+import prisma from "../lib/prisma";
+import { param, requireUserId } from "../lib/http";
+import { getMemberBoard, getOwnedBoard, publicUser } from "../lib/access";
+import { boardEvents } from "../lib/socket";
 
-const prisma = new PrismaClient();
+/**
+ * GET /chat/:boardId?before=<messageId>&limit=50
+ * Cursor-paginated history, returned oldest → newest. The socket sends the latest page
+ * on join; the client calls this with `before` to load older messages on scroll.
+ */
+export const getHandler = async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  const boardId = param(req, "boardId");
+  await getMemberBoard(boardId, userId);
 
-// Get Board Chat History
-const getHandler = async (req: Request, res: Response) => {
-  const userId = req.userId;
-  const { title } = req.params as { title: string };
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
+  const before = typeof req.query.before === "string" ? req.query.before : undefined;
 
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
+  const page = await prisma.chat.findMany({
+    where: { boardId },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
+    ...(before ? { cursor: { id: before }, skip: 1 } : {}),
+    include: { user: { select: publicUser } },
+  });
 
-  try {
-    const board = await prisma.board.findFirst({
-      where: {
-        title,
-        OR: [
-          { ownerId: userId },
-          { users: { some: { id: userId } } },
-        ],
-      },
-    });
-
-    if (!board) {
-      res.status(403).json({ error: "Access denied" });
-      return;
-    }
-
-    const messages = await prisma.chat.findMany({
-      where: { boardId: board.id },
-      orderBy: { createdAt: "asc" },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-      },
-    });
-
-    res.json(messages);
-    return;
-  } catch (err) {
-    console.error("getMessagesHandler error:", err);
-    res.status(500).json({ error: "Failed to fetch messages" });
-    return;
-  }
+  const hasMore = page.length > limit;
+  res.json({ messages: page.slice(0, limit).reverse(), hasMore });
 };
 
-// Send a Chat Message
-// const sendHandler = async (req: Request, res: Response) => {
-//   const userId = req.userId;
-//   const { title } = req.params as { title: string };
-//   const { message } = req.body;
+/** DELETE /chat/:boardId — owner clears the chat history. */
+export const deleteHandler = async (req: Request, res: Response) => {
+  const userId = requireUserId(req);
+  const boardId = param(req, "boardId");
+  await getOwnedBoard(boardId, userId, "clear the chat");
 
-//   if (!userId) {
-//     res.status(401).json({ error: "Unauthorized" });
-//     return;
-//   }
-
-//   if (!message) {
-//     res.status(400).json({ error: "Message is required" });
-//     return;
-//   }
-
-//   try {
-//     const board = await prisma.board.findUnique({ where: { title } });
-//     if (!board) {
-//       res.status(404).json({ error: "Board not found" });
-//       return;
-//     }
-
-//     const chat = await prisma.chat.create({
-//       data: {
-//         boardId: board.id,
-//         userId: userId,
-//         message,
-//       },
-//       include: {
-//         user: { select: { id: true, name: true, email: true } },
-//       },
-//     });
-
-//     res.status(201).json(chat);
-//     return;
-//   } catch (err) {
-//     console.error("sendMessageHandler error:", err);
-//     res.status(500).json({ error: "Failed to send message" });
-//     return;
-//   }
-// };
-
-// Delete All Chat for a Board
-const deleteHandler = async (req: Request, res: Response) => {
-  const userId = req.userId;
-  const { title } = req.body as { title: string };
-
-  if (!userId) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
-  try {
-    const board = await prisma.board.findFirst({
-      where: {
-        title,
-        ownerId: userId,
-      },
-    });
-
-    if (!board) {
-      res.status(403).json({ error: "Only the owner can delete the chat" });
-      return;
-    }
-
-    await prisma.chat.deleteMany({
-      where: { boardId: board.id },
-    });
-
-    res.status(200).json({ message: "Chat deleted successfully" });
-    return;
-  } catch (err) {
-    console.error("deleteHandler error:", err);
-    res.status(500).json({ error: "Internal server error" });
-    return;
-  }
+  await prisma.chat.deleteMany({ where: { boardId } });
+  boardEvents()?.server.of("/chat").to(boardId).emit("chatCleared");
+  res.json({ message: "Chat cleared" });
 };
-
-export { getHandler, deleteHandler };

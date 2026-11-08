@@ -1,14 +1,29 @@
-import  express, { Router }  from "express";
-import { BoardUserHandler, DeletHandler, getAllBoardHandler, getBoardHandler, InviteHandler, newBoardHandler, updateHandler } from "../controllers/BoardHandler";
+import { Router } from "express";
+import {
+  deleteHandler,
+  getAllBoardHandler,
+  getBoardHandler,
+  getMembersHandler,
+  inviteHandler,
+  newBoardHandler,
+  removeMemberHandler,
+  updateHandler,
+} from "../controllers/BoardHandler";
 import authenticateToken from "../middlewares/Authmiddleware";
-const boardRouter = Router()
 
-boardRouter.get("/all",authenticateToken,getAllBoardHandler);
-boardRouter.get("/:id",authenticateToken,getBoardHandler);
-boardRouter.post("/new",authenticateToken,newBoardHandler);
-boardRouter.get("/users",authenticateToken,BoardUserHandler);
-boardRouter.post("/invite",authenticateToken,InviteHandler);
-boardRouter.patch("/update",authenticateToken,updateHandler);
-boardRouter.delete("/:title",authenticateToken,DeletHandler);
+const boardRouter = Router();
+boardRouter.use(authenticateToken);
 
-export {boardRouter}
+// Static paths must come before "/:id" or they'd be swallowed by it.
+boardRouter.get("/all", getAllBoardHandler);
+boardRouter.post("/new", newBoardHandler);
+
+boardRouter.get("/:id", getBoardHandler);
+boardRouter.patch("/:id", updateHandler);
+boardRouter.delete("/:id", deleteHandler);
+
+boardRouter.get("/:id/members", getMembersHandler);
+boardRouter.post("/:id/members", inviteHandler);
+boardRouter.delete("/:id/members/:userId", removeMemberHandler);
+
+export { boardRouter };

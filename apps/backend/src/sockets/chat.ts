@@ -1,97 +1,72 @@
-import { Server, Socket } from "socket.io";
-import jwt from "jsonwebtoken";
-import { PrismaClient } from "@prisma/client";
+import { Server } from "socket.io";
+import prisma from "../lib/prisma";
+import { publicUser } from "../lib/access";
+import { inBoard, joinBoardRoom, leaveBoardRoom, socketUser, useSocketAuth } from "../lib/socket";
 
-const prisma = new PrismaClient();
+const PAGE_SIZE = 50;
+const MAX_LENGTH = 2000;
+
+type Ack = (res: { ok: true; message: unknown } | { ok: false; error: string }) => void;
 
 export const initChatSocket = (io: Server) => {
-  const chatNamespace = io.of("/chat");
+  const nsp = io.of("/chat");
+  useSocketAuth(nsp);
 
-  // Middleware for /chat namespace
-  chatNamespace.use((socket: Socket, next) => {
-    const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error("Unauthorized"));
+  nsp.on("connection", (socket) => {
+    const me = socketUser(socket);
 
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as { userId: string };
-      socket.data.userId = decoded.userId;
-      next();
-    } catch (err) {
-      next(new Error("Invalid token"));
-    }
-  });
+    socket.on("joinBoard", async (boardId: unknown) => {
+      try {
+        // Previously anyone with a valid token could join any board's chat. Not any more.
+        const id = await joinBoardRoom(socket, boardId);
+        if (!id) return;
 
-  chatNamespace.on("connection", (socket: Socket) => {
-    console.log("New client connected to chat:", socket.id);
-
-    socket.on("joinBoard", async (boardId: string) => {
-      const board = await prisma.board.findUnique({
-        where: { id: boardId },
-      });
-
-      if (!board) {
-        return socket.emit("error", { message: "Board not found" });
+        // Only the latest page; older messages come from GET /chat/:boardId?before=...
+        const latest = await prisma.chat.findMany({
+          where: { boardId: id },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          take: PAGE_SIZE + 1,
+          include: { user: { select: publicUser } },
+        });
+        socket.emit("initialMessages", {
+          messages: latest.slice(0, PAGE_SIZE).reverse(),
+          hasMore: latest.length > PAGE_SIZE,
+        });
+      } catch (err) {
+        console.error("chat joinBoard error:", err);
+        socket.emit("error", { message: "Failed to load chat" });
       }
-
-      socket.join(boardId);
-      console.log(`${socket.id} joined chat board ${boardId}`);
-      socket.emit("joinedBoard", { boardId, socketId: socket.id });
-
-      const messages = await prisma.chat.findMany({
-        where: { boardId },
-        include: { user: { select: { id: true, name: true, email: true } } },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      socket.emit("initialMessages", messages);
     });
 
-    socket.on("chatMessage", async ({ boardId, message }: { boardId: string; message: string }) => {
-      const userId = socket.data.userId;
-      if (!userId) {
-        return socket.emit("error", { message: "Unauthorized" });
-      }
+    socket.on("chatMessage", async (payload: { boardId?: unknown; message?: unknown } = {}, ack?: Ack) => {
+      const reply: Ack = typeof ack === "function" ? ack : () => undefined;
+      const { boardId } = payload;
+      const text = typeof payload.message === "string" ? payload.message.trim() : "";
+
+      if (!inBoard(socket, boardId)) return reply({ ok: false, error: "Join the board first" });
+      if (!text) return reply({ ok: false, error: "Message is empty" });
+      if (text.length > MAX_LENGTH) return reply({ ok: false, error: `Messages are limited to ${MAX_LENGTH} characters` });
 
       try {
-        const board = await prisma.board.findFirst({
-          where: {
-            id: boardId,
-            OR: [
-              { ownerId: userId },
-              { users: { some: { id: userId } } },
-            ],
-          },
-        });
-
-        if (!board) {
-          return socket.emit("error", { message: "You're not a member of this board" });
-        }
-
         const chat = await prisma.chat.create({
-          data: {
-            boardId,
-            userId,
-            message,
-          },
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-          },
+          data: { boardId, userId: me.userId, message: text },
+          include: { user: { select: publicUser } },
         });
-
-        chatNamespace.to(boardId).emit("chatMessage", chat);
+        nsp.to(boardId).emit("chatMessage", chat);
+        reply({ ok: true, message: chat });
       } catch (err) {
-        console.error("Chat message error:", err);
-        socket.emit("error", { message: "Failed to send message" });
+        console.error("chatMessage error:", err);
+        reply({ ok: false, error: "Failed to send message" });
       }
     });
 
-    socket.on("leaveBoard", (boardId: string) => {
-      socket.leave(boardId);
-      console.log(`${socket.id} left chat board ${boardId}`);
+    socket.on("typing", ({ boardId, isTyping }: { boardId?: unknown; isTyping?: unknown } = {}) => {
+      if (!inBoard(socket, boardId)) return;
+      socket.volatile.to(boardId).emit("typing", { ...me, isTyping: Boolean(isTyping) });
     });
 
-    socket.on("disconnect", () => {
-      console.log("Client disconnected from chat:", socket.id);
+    socket.on("leaveBoard", (boardId: unknown) => {
+      if (inBoard(socket, boardId)) leaveBoardRoom(socket, boardId);
     });
   });
 };

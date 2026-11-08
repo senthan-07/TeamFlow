@@ -1,74 +1,69 @@
-import { PrismaClient } from "@prisma/client";
+import { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import dotenv from "dotenv";
-import  jwt  from "jsonwebtoken";
-import { SignupRequest ,SigninRequest } from "../types/auth";
+import jwt from "jsonwebtoken";
+import prisma from "../lib/prisma";
+import { config } from "../config";
+import { badRequest, HttpError, requireUserId } from "../lib/http";
+import { publicUser } from "../lib/access";
 
-dotenv.config();
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const prisma = new PrismaClient();
+const signToken = (user: { id: string; email: string }) =>
+  jwt.sign({ userId: user.id, email: user.email }, config.jwtSecret, {
+    expiresIn: config.jwtExpiresIn,
+  });
 
+export const signupHandler = async (req: Request, res: Response) => {
+  const name = typeof req.body?.name === "string" ? req.body.name.trim() : "";
+  const email = typeof req.body?.email === "string" ? req.body.email.trim().toLowerCase() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
 
+  if (!EMAIL_RE.test(email)) throw badRequest("Please enter a valid email address");
+  if (password.length < 8) throw badRequest("Password must be at least 8 characters");
+  if (name.length > 60) throw badRequest("Name must be 60 characters or fewer");
 
-export const signupHandler = async (req: SignupRequest, res: any) => {
-  try {
-    const { name, email, password } = req.body;
+  const existing = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+    select: { id: true },
+  });
+  if (existing) throw new HttpError(409, "An account with this email already exists");
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
-    if (existingUser) {
-      return res.status(400).json({ error: "User already exists" });
-    }
+  const user = await prisma.user.create({
+    data: { name: name || null, email, password: await bcrypt.hash(password, 10) },
+    select: publicUser,
+  });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-      },
-    });
-
-    res.status(201).json({ message: "User registered successfully", user:user });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error signing up user" });
-  }
+  // Return a token too, so the client is signed in straight after registering.
+  res.status(201).json({ message: "Account created", user, token: signToken(user) });
 };
 
-export const signinHandler = async (req: SigninRequest, res: any) => {
-  try {
-    const { email, password } = req.body;
+export const signinHandler = async (req: Request, res: Response) => {
+  const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  if (!email || !password) throw badRequest("Email and password are required");
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
+  // Case-insensitive so accounts created before email normalisation still work.
+  const user = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
 
-    if (!user) {
-      return res.status(400).json({ error: "User not found" });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(400).json({ error: "Invalid credentials" });
-    }
-
-    const token = jwt.sign(
-      { userId: user.id, email: user.email },
-      process.env.JWT_SECRET!,  // Make sure to store your secret key in .env
-      { expiresIn: '5h' }       // Set expiration to 1 hour (adjustable)
-    );
-
-    // Send the token to the user
-    res.status(200).json({
-      user:user,
-      message: "Login successful",
-      token,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error logging in" });
+  // Same message for both cases so the endpoint can't be used to discover accounts.
+  if (!user || !(await bcrypt.compare(password, user.password))) {
+    throw new HttpError(401, "Invalid email or password");
   }
+
+  res.json({
+    message: "Login successful",
+    user: { id: user.id, name: user.name, email: user.email },
+    token: signToken(user),
+  });
 };
 
+export const meHandler = async (req: Request, res: Response) => {
+  const user = await prisma.user.findUnique({
+    where: { id: requireUserId(req) },
+    select: { ...publicUser, createdAt: true },
+  });
+  if (!user) throw new HttpError(401, "Account no longer exists");
+  res.json(user);
+};
